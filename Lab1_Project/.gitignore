@@ -1,0 +1,17 @@
+# Rust build artifacts
+/target/
+
+# Generated program output
+/xyz.txt
+
+# IDE settings
+/.vscode/
+/.idea/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# Editor temporary files
+*.swp
+*.swo
