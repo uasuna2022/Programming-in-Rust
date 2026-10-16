@@ -5,6 +5,22 @@ struct NumberWithUnit {
     value: f64,
 }
 
+struct DoubleString(String, String);
+
+impl DoubleString {
+    fn from_strs(str_1: &str, str_2: &str) -> Self {
+        Self(str_1.to_string(), str_2.to_string())
+    }
+
+    fn from_strings(str_1: &String, str_2: &String) -> Self {
+        Self(str_1.to_owned(), str_2.to_owned())
+    }
+
+    fn show(&self) {
+        println!("({}, {})", self.0, self.1);
+    }
+}
+
 impl NumberWithUnit {
     fn unitless(value: f64) -> Self {
         Self {
@@ -115,18 +131,13 @@ fn main() {
     println!("speed: {:?}", speed);
 
     let speed2 = NumberWithUnit::with_unit(200.0, String::from("m"))
-        .clone().div(time.clone());
+        .clone().mul(time.clone());
 
     println!("speed2: {:?}", speed2);
     let mut mut_var = NumberWithUnit::with_unit(137.11, String::from("m"));
     mut_var.div_in_place(&time);
     println!("mut_var: {:?}", mut_var);
 
-    let values = [
-        NumberWithUnit::with_unit(2.0, String::from("m")),
-        NumberWithUnit::with_unit(3.0, String::from("s")),
-        NumberWithUnit::with_unit(4.0, String::from("kg"))
-    ];
 
     let values_vec = vec![
         NumberWithUnit::with_unit(25.0, String::from("m")),
@@ -134,8 +145,8 @@ fn main() {
         NumberWithUnit::with_unit(41.0, String::from("kg"))
     ];
 
-    let product1 = mul_vals(&values);
-    let product2 = mul_vals(&values);
+    let product1 = mul_vals(&values_vec);
+    let product2 = mul_vals(&values_vec);
 
     let product_vec_1 = mul_vals_vec(values_vec.clone());
     let product_vec_2 = mul_vals_vec(values_vec);
@@ -145,4 +156,27 @@ fn main() {
     println!("product_vec_1: {:?}", product_vec_1);
     println!("product_vec_2: {:?}", product_vec_2);
 
+    let mut mass1 = NumberWithUnit::with_unit(5.0, String::from("kg"));
+    let mass2 = NumberWithUnit::with_unit(3.0, String::from("kg"));
+
+    let mass3 = mass1.clone().add(mass2.clone());
+    println!("mass3: {:?}", mass3);
+
+    mass1.add_in_place(&mass2);
+    println!("mass1 after addition: {:?}", mass1);
+
+    
+
+
+    // Part 2 
+    let string = String::from("Hello");
+    let str_slice: &str = "World!";
+
+    let double_string1 = DoubleString::from_strs(&string, str_slice);
+    let double_string2 = DoubleString::from_strings(&string, &str_slice.to_string());
+    // let double_string2 = DoubleString::from_strings(&string, str_slice);
+
+    double_string1.show();
+    double_string2.show();
 }
+
