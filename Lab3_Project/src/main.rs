@@ -1,4 +1,207 @@
-fn main() {}
+#[derive(Debug, Clone, PartialEq, Copy)]
+enum Var {
+    X, 
+    Y, 
+    Z,
+}
+
+impl Var {
+    fn to_string(&self) -> String {
+        match self {
+            Var::X => "X".to_string(),
+            Var::Y => "Y".to_string(),
+            Var::Z => "Z".to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+enum Const {
+    Numeric(i64),
+    Named(String),
+}
+
+impl Const {
+    fn to_string(&self) -> String {
+        match self {
+            Const::Numeric(n) => n.to_string(),
+            Const::Named(s) => s.clone(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+enum E {
+    Add(Box<E>, Box<E>),
+    Neg(Box<E>),
+    Mul(Box<E>, Box<E>),
+    Inv(Box<E>),
+    Const(Const),
+    Func { name: String, arg: Box<E> },
+    Var(Var),
+}
+
+impl E {
+    fn add(e1: Box<Self>, e2: Box<Self>) -> Box<Self> {
+        Box::new(Self::Add(e1, e2))
+    }
+
+    fn neg(e: Box<Self>) -> Box<Self> {
+        Box::new(Self::Neg(e))
+    }
+
+    fn mul(e1: Box<Self>, e2: Box<Self>) -> Box<Self> {
+        Box::new(Self::Mul(e1, e2))
+    }
+
+    fn inv(e: Box<Self>) -> Box<Self> {
+        Box::new(Self::Inv(e))
+    }
+
+    fn constant(c: Const) -> Box<Self> {
+        Box::new(Self::Const(c))
+    }
+
+    fn func(name: String, arg: Box<Self>) -> Box<Self> {
+        Box::new(Self::Func { name, arg })
+    }
+
+    fn var(v: Var) -> Box<Self> {
+        Box::new(Self::Var(v))
+    }
+
+    fn to_string(&self) -> String {
+        match self {
+            Self::Add(e1, e2) => format!("({} + {})", e1.to_string(), e2.to_string()),
+            Self::Neg(e) => format!("-({})", e.to_string()),
+            Self::Mul(e1, e2) => format!("({} * {})", e1.to_string(), e2.to_string()),
+            Self::Inv(e) => format!("1/({})", e.to_string()),
+            Self::Const(c) => c.to_string(),
+            Self::Func { name, arg } => format!("{}({})", name, arg.to_string()),
+            Self::Var(v) => v.to_string(),
+        }
+    }
+
+    fn arg_count(&self) -> u32 {
+        match self {
+            Self::Const(_) | Self::Var(_) => 0,
+            Self::Neg(_) | Self::Inv(_) | Self::Func { .. } => 1,
+            Self::Add(_, _) | Self::Mul(_, _) => 2,
+        }
+    }
+
+    fn diff(self, by: Var) -> Box<Self> {
+        match self {
+            Self::Const(_) => Self::constant(Const::Numeric(0)),
+            Self::Var(v) => {
+                if v == by {
+                    Self::constant(Const::Numeric(1))
+                } else {
+                    Self::constant(Const::Numeric(0))
+                }
+            },
+            Self::Add(e1, e2) => Self::add(e1.diff(by), e2.diff(by)),
+            Self::Neg(e) => Self::neg(e.diff(by)),
+            Self::Mul(e1, e2) => Self::add(
+                Self::mul(e1.clone().diff(by), e2.clone()),
+                Self::mul(e1, e2.diff(by)),
+            ),
+            Self::Inv(e) => Self::mul(
+                Self::neg(Self::inv(Self::mul(e.clone(), e.clone()))),
+                e.diff(by),
+            ),
+            Self::Func { name, arg } => Self::mul(
+                Self::func(format!("{}_{}", name, by.to_string()), arg.clone()),
+                arg.diff(by),
+            ),
+        }
+    }
+
+    fn unpack_inv_inv(self) -> Option<Box<Self>> {
+        let Self::Inv(inner) = self else { return None };
+        let Self::Inv(e) = *inner else { return None };
+        Some(e)
+    }
+
+    fn uninv(self: Box<Self>) -> Box<Self> {
+        let mut expr = self;
+        while let Some(inner) = expr.clone().unpack_inv_inv() {
+            expr = inner;
+        }
+        expr
+    }
+
+    fn unpack_neg_neg(self) -> Option<Box<Self>> {
+        if let Self::Neg(inner) = self && let Self::Neg(e) = *inner {
+            Some(e)
+        } else {
+            None
+        }
+    }
+
+    fn unneg(self: Box<Self>) -> Box<Self> {
+        let mut expr = self;
+        while let Some(inner) = expr.clone().unpack_neg_neg() {
+            expr = inner;
+        }
+        expr
+    }
+
+    fn substitute(self, name: &str, value: Box<Self>) -> Box<Self> {
+        match self {
+            Self::Const(Const::Named(ref s)) if s == name => value,
+            Self::Const(c) => Self::constant(c),
+            Self::Var(v) => Self::var(v),
+            Self::Add(e1, e2) => {
+                Self::add(e1.substitute(name, value.clone()), e2.substitute(name, value))
+            }
+            Self::Mul(e1, e2) => {
+                Self::mul(e1.substitute(name, value.clone()), e2.substitute(name, value))
+            }
+            Self::Neg(e) => Self::neg(e.substitute(name, value)),
+            Self::Inv(e) => Self::inv(e.substitute(name, value)),
+            Self::Func {
+                name: fname,
+                arg,
+            } => Self::func(fname, arg.substitute(name, value)),
+        }
+    }
+}
+
+// Podpunkt 14: użycie systemu w main w celu eliminacji ostrzeżeń
+fn main() {
+    let x = Var::X;
+    let y = Var::Y;
+    let z = Var::Z;
+    println!("Variables: {}, {}, {}", x.to_string(), y.to_string(), z.to_string());
+
+    let c1 = Const::Numeric(42);
+    let c2 = Const::Named("a".to_string());
+    println!("Constants: {}, {}", c1.to_string(), c2.to_string());
+
+    let expr = E::add(
+        E::mul(E::var(x), E::var(y)),
+        E::func("f".into(), E::constant(c2)),
+    );
+    println!("Expression: {}", expr.to_string());
+    println!("Number of arguments in the root: {}", expr.arg_count());
+
+    let d = expr.clone().diff(Var::X);
+    println!("Derivative with respect to X: {}", d.to_string());
+
+    let double_inv = E::inv(E::inv(E::var(z)));
+    let _ = double_inv.clone().unpack_inv_inv();
+    let uninv_expr = double_inv.uninv();
+    println!("Simplified inverse: {}", uninv_expr.to_string());
+
+    let double_neg = E::neg(E::neg(E::var(y)));
+    let _ = double_neg.clone().unpack_neg_neg();
+    let unneg_expr = double_neg.unneg();
+    println!("Simplified negation: {}", unneg_expr.to_string());
+
+    let subst = expr.substitute("a", E::constant(c1));
+    println!("After substitution: {}", subst.to_string());
+}
 
 #[cfg(test)]
 mod tests {
