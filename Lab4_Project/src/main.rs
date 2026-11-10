@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 use std::hint::black_box;
+use std::io::{self, Read, Write};
+use std::net::{TcpListener, TcpStream};
 use std::num::NonZero;
 use std::time::{Duration, Instant};
 
@@ -18,6 +20,38 @@ fn assert_sorted(values: &[u32]) {
             panic!("slice is not sorted: {} > {}", window[0], window[1]);
         }
     }
+}
+
+fn bulk_write(stream: &mut TcpStream, buf: &[u8]) -> io::Result<()> {
+    let mut sent = 0;
+
+    while sent < buf.len() {
+        match stream.write(&buf[sent..]) {
+            Ok(0) => return Err(io::Error::new(io::ErrorKind::WriteZero, "failed to write whole buffer")),
+            Ok(n) => sent += n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        }
+    }
+
+    Ok(())
+}
+
+fn bulk_read(stream: &mut TcpStream, size: usize) -> io::Result<Vec<u8>> {
+    let mut buf = vec![0u8; size];
+    let mut received = 0;
+
+    while received < size {
+        match stream.read(&mut buf[received..]) {
+            Ok(0) => return Err(io::Error::new(io::ErrorKind::UnexpectedEof,
+                "connection closed before reading all bytes")),
+            Ok(n) => received += n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        }
+    }
+
+    Ok(buf)
 }
 
 
@@ -42,6 +76,21 @@ fn main() {
     let average = total / 100;
 
     println!("Average time: {:.6} ms", average.as_secs_f64() * 1000.0);
+
+
+    let listener = TcpListener::bind("127.0.0.1:7878").expect("Could not bind to address");
+    println!("Server listening on {}", listener.local_addr().unwrap());
+
+    for connection in listener.incoming() {
+        match connection {
+            Ok(stream) => {
+                println!("Connected to new client: {:?}", stream.peer_addr());
+            }
+            Err(e) => {
+                eprintln!("Error accepting connection: {e}");
+            }
+        }
+    }
 }
 
 #[cfg(test)]
