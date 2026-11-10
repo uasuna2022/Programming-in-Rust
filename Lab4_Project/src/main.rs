@@ -1,3 +1,16 @@
+use std::collections::BTreeSet;
+use std::num::NonZero;
+
+fn divisors(n: NonZero<u32>) -> BTreeSet<NonZero<u32>> {
+    let n: u32 = n.get();
+    (1..=n).
+        filter(|&d: &u32| n % d == 0).
+        map(|d: u32| NonZero::new(d).unwrap()).
+        collect::<BTreeSet<NonZero<u32>>>()
+}
+
+
+
 fn main() {}
 
 #[cfg(test)]
