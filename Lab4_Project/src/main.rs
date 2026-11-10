@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
+use std::hint::black_box;
 use std::num::NonZero;
+use std::time::{Duration, Instant};
 
 fn divisors(n: NonZero<u32>) -> BTreeSet<NonZero<u32>> {
     let n: u32 = n.get();
@@ -10,8 +12,37 @@ fn divisors(n: NonZero<u32>) -> BTreeSet<NonZero<u32>> {
 }
 
 
+fn assert_sorted(values: &[u32]) {
+    for window in values.windows(2) {
+        if window[0] > window[1] {
+            panic!("slice is not sorted: {} > {}", window[0], window[1]);
+        }
+    }
+}
 
-fn main() {}
+
+
+fn main() {
+    let sorted_vec = vec![1, 2, 3, 4, 5, 4, 3, 2, 1];
+    assert_sorted(&sorted_vec[0..=4]);
+    // assert_sorted(&sorted_vec); // This will panic
+
+    let mut total: Duration = Duration::ZERO;
+
+    for i in 1..=100 {
+        let n = NonZero::new(i).unwrap();
+
+        let start = Instant::now();             
+        black_box(divisors(black_box(n)));       
+        let elapsed = start.elapsed();           
+
+        total += elapsed;                      
+    }
+
+    let average = total / 100;
+
+    println!("Average time: {:.6} ms", average.as_secs_f64() * 1000.0);
+}
 
 #[cfg(test)]
 mod tests {
