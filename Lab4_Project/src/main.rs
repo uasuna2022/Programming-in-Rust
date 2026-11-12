@@ -1,8 +1,10 @@
 use std::collections::BTreeSet;
+use std::fs;
 use std::hint::black_box;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::num::NonZero;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 fn divisors(n: NonZero<u32>) -> BTreeSet<NonZero<u32>> {
@@ -54,6 +56,47 @@ fn bulk_read(stream: &mut TcpStream, size: usize) -> io::Result<Vec<u8>> {
     Ok(buf)
 }
 
+fn handle_client(mut stream: TcpStream) -> io::Result<()> {
+    let len_bytes = bulk_read(&mut stream, 4)?;
+    let len = u32::from_be_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]) as usize;
+
+    let path_bytes = bulk_read(&mut stream, len)?;
+    let path = match String::from_utf8(path_bytes) {
+        Ok(s) => PathBuf::from(s),
+        Err(_) => {
+            bulk_write(&mut stream, "Bad path\n".as_bytes())?;
+            return Ok(());
+        }
+    };
+
+    let entries = match fs::read_dir(&path) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Error reading directory: {e}");
+            bulk_write(&mut stream, "Bad dir\n".as_bytes())?;
+            return Ok(());
+        }
+    };
+
+    let mut response = String::new();
+    for entry in entries {
+        match entry {
+            Ok(entry) => {
+                response.push_str(&entry.file_name().to_string_lossy());
+                response.push('\n');
+            }
+            Err(e) => {
+                eprintln!("Error reading directory entry: {e}");
+                bulk_write(&mut stream, "Bad dir\n".as_bytes())?;
+                return Ok(());
+            }
+        }
+    }
+
+    bulk_write(&mut stream, response.as_bytes())?;
+    Ok(())
+}
+
 
 
 fn main() {
@@ -85,6 +128,9 @@ fn main() {
         match connection {
             Ok(stream) => {
                 println!("Connected to new client: {:?}", stream.peer_addr());
+                if let Err(e) = handle_client(stream) {
+                    eprintln!("Error handling client: {e}");
+                }
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {e}");
