@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 fn divisors(n: NonZero<u32>) -> BTreeSet<NonZero<u32>> {
     let n: u32 = n.get();
     (1..=n).
-        filter(|&d: &u32| n % d == 0).
+        filter(|&d: &u32| n.is_multiple_of(d)).
         map(|d: u32| NonZero::new(d).unwrap()).
         collect::<BTreeSet<NonZero<u32>>>()
 }
