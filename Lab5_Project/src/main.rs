@@ -18,6 +18,56 @@ fn print<T: Expr>(inner: T) -> Print<T> {
     Print { inner }
 }
 
+impl<T: Expr> Stmt for Print<T> {
+    fn exec_stmt(&mut self, context: &Context) {
+        let value: u64 = self.inner.exec_expr(context);
+        println!("{}", value);
+    }
+}
+
+struct Nothing;
+
+impl Stmt for Nothing {
+    fn exec_stmt(&mut self, context: &Context) {}
+}
+
+fn nothing() -> Nothing {
+    Nothing
+}
+
+struct Seq<T: Stmt, U: Stmt> {
+    first: T,
+    second: U,
+}
+
+impl<T: Stmt, U: Stmt> Stmt for Seq<T, U> {
+    fn exec_stmt(&mut self, context: &Context) {
+        self.first.exec_stmt(context);
+        self.second.exec_stmt(context);
+    }
+}
+
+fn seq<T: Stmt, U: Stmt>(first: T, second: U) -> Seq<T, U> {
+    Seq { first, second }
+}
+
+impl<T: Stmt> Seq<T, Nothing> {
+    fn shorten_1(self) -> T {
+        self.first
+    }
+}
+
+impl<T: Stmt> Seq<Nothing, T> {
+    fn shorten_2(self) -> T {
+        self.second
+    }
+}
+
+impl Seq<Nothing, Nothing> {
+    fn collapse(self) -> Nothing {
+        Nothing
+    }
+}
 
 fn main() {
 
