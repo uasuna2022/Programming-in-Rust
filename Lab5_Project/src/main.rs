@@ -28,7 +28,7 @@ impl<T: Expr> Stmt for Print<T> {
 struct Nothing;
 
 impl Stmt for Nothing {
-    fn exec_stmt(&mut self, context: &Context) {}
+    fn exec_stmt(&mut self, _context: &Context) {}
 }
 
 fn nothing() -> Nothing {
@@ -68,6 +68,70 @@ impl Seq<Nothing, Nothing> {
         Nothing
     }
 }
+
+impl Expr for u64 {
+    fn exec_expr(&mut self, _context: &Context) -> u64 {
+        *self
+    }
+}
+
+struct When<C: Expr, T: Expr, F: Expr> {
+    condition: C,
+    if_true: T,
+    if_false: F,
+}
+
+impl<C: Expr, T: Expr, F: Expr> Expr for When<C, T, F> {
+    fn exec_expr(&mut self, context: &Context) -> u64 {
+        let cond_value = self.condition.exec_expr(context);
+        let result;
+        if cond_value == 0 {
+            result = self.if_false.exec_expr(context);
+        } else {
+            result = self.if_true.exec_expr(context);
+        }
+
+        result
+    }
+}
+
+fn when<C: Expr, T: Expr, F: Expr>(condition: C, if_true: T, if_false: F) -> When<C, T, F> {
+    When { condition, if_true, if_false }
+}
+
+struct Repeat<const N: u32, T: Stmt> {
+    inner: T,
+}
+
+// Here we avoid loop overhead by unrolling the loop at compile time using const generics.
+// So in compilation time, we already know how many times we need to repeat the inner stmt.
+// Repeat<3, T> and Repeat<5, T> are different types, so the compiler can optimize them separately.
+fn repeat<const N: u32, T: Stmt>(inner: T) -> Repeat<N, T> {
+    Repeat { inner }
+}
+
+impl<const N: u32, T: Stmt> Stmt for Repeat<N, T> {
+    fn exec_stmt(&mut self, context: &Context) {
+        for _ in 1..=N {
+            self.inner.exec_stmt(context);
+        }
+    }
+}
+
+struct Constant {
+    name: &'static str,
+}
+
+fn constant(name: &'static str) -> Constant {
+    Constant { name }
+}
+
+impl Expr for Constant {
+    fn exec_expr(&mut self, context: &Context) -> u64 {
+        *context.get(self.name).unwrap()
+    }
+}
+
 
 fn main() {
 
