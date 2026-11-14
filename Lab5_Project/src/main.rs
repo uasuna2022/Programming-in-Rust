@@ -118,6 +118,7 @@ impl<const N: u32, T: Stmt> Stmt for Repeat<N, T> {
     }
 }
 
+// 'static means that the reference is valid for the entire duration of the program
 struct Constant {
     name: &'static str,
 }
@@ -129,6 +130,67 @@ fn constant(name: &'static str) -> Constant {
 impl Expr for Constant {
     fn exec_expr(&mut self, context: &Context) -> u64 {
         *context.get(self.name).unwrap()
+    }
+}
+
+struct ReadFrom<'a> {
+    value: &'a u64,
+}
+
+// Here thanks to the lifetime parameter 'a, 
+// we insure that the reference to the u64 value is valid 
+// for the entire duration of the ReadFrom struct's lifetime.
+fn read_from<'a>(value: &'a u64) -> ReadFrom<'a> {
+    ReadFrom { value }
+}
+
+impl<'a> Expr for ReadFrom<'a> {
+    fn exec_expr(&mut self, _context: &Context) -> u64 {
+        *self.value
+    }
+}
+
+struct SaveIn<'a, T: Expr> {
+    destination: &'a mut u64,
+    inner: T,
+}
+
+fn save_in<'a, T: Expr>(destination: &'a mut u64, inner: T) -> SaveIn<'a, T> {
+    SaveIn {
+        destination,
+        inner,
+    }
+}
+
+impl<'a, T: Expr> Expr for SaveIn<'a, T> {
+    fn exec_expr(&mut self, context: &Context) -> u64 {
+        let val = self.inner.exec_expr(context);
+        *self.destination = val;
+        val
+    }
+}
+
+struct Volatile<'a, T: Expr> {
+    destination: &'a mut u64,
+    name: &'static str,
+    inner: T,
+}
+
+fn volatile<'a, T: Expr>(destination: &'a mut u64, name: &'static str, inner: T) -> Volatile<'a, T> {
+    Volatile {
+        destination,
+        name,
+        inner,
+    }
+}
+
+impl<'a, T: Expr> Expr for Volatile<'a, T> {
+    fn exec_expr(&mut self, context: &Context) -> u64 {
+        let mut new_context = context.clone();
+        new_context.insert(self.name, *self.destination);
+        let val = self.inner.exec_expr(&new_context);
+        *self.destination = val;
+        val
     }
 }
 
