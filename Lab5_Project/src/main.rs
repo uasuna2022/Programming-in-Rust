@@ -84,14 +84,11 @@ struct When<C: Expr, T: Expr, F: Expr> {
 impl<C: Expr, T: Expr, F: Expr> Expr for When<C, T, F> {
     fn exec_expr(&mut self, context: &Context) -> u64 {
         let cond_value = self.condition.exec_expr(context);
-        let result;
         if cond_value == 0 {
-            result = self.if_false.exec_expr(context);
+            self.if_false.exec_expr(context)
         } else {
-            result = self.if_true.exec_expr(context);
+            self.if_true.exec_expr(context)
         }
-
-        result
     }
 }
 
@@ -196,7 +193,41 @@ impl<'a, T: Expr> Expr for Volatile<'a, T> {
 
 
 fn main() {
+    let context = HashMap::from([("x", 0), ("y", 10)]);
 
+    let mut part1 = seq(
+        print(when(constant("y"), 100u64, 200u64)),
+        print(when(constant("x"), 100u64, 200u64)),
+    );
+    part1.exec_stmt(&context);
+
+
+    let mut a: u64 = 0;
+    let mut part2a = print(save_in(&mut a, when(constant("y"), 42u64, 84u64)));
+    part2a.exec_stmt(&context);
+    println!("Value read directly through ReadFrom:");
+    let mut part2b = print(read_from(&a));
+    part2b.exec_stmt(&context);
+
+
+    let part3 = seq(
+        repeat::<3, _>(print(111u64)),
+        nothing(),
+    );
+
+
+    let mut part3_shortened = part3.shorten_1();
+    part3_shortened.exec_stmt(&context);
+
+
+    let mut part4 = print(volatile(&mut a, "y", when(constant("y"), 777u64, 888u64)));
+    part4.exec_stmt(&context);
+    println!("Updated 'a' after Volatile: {}", a);
+
+    let mut s2 = seq(nothing(), print(999u64)).shorten_2();
+
+    s2.exec_stmt(&context);
+    let _c = seq(nothing(), nothing()).collapse();
 }
 
 #[cfg(test)]
