@@ -28,11 +28,18 @@ pub fn make_counter(start: i64) -> impl FnMut() -> i64 {
 }
 
 pub fn sum_squares_odd_loop(list: &[u32]) -> u32 {
-    todo!()
+    let mut sum: u32 = 0;
+    for &value in list {
+        if value % 2 != 0 {
+            sum += value * value;
+        }
+    }
+
+    sum
 }
 
 pub fn sum_squares_odd(list: &[u32]) -> u32 {
-    todo!()
+    list.iter().filter(|&x| !x.is_multiple_of(2)).map(|x| x * x).sum()
 }
 
 pub fn vertices_loop(edges: &[(u32, u32)]) -> Vec<u32> {
@@ -54,11 +61,27 @@ pub fn cycles_2(edges: &[(u32, u32)]) -> Vec<u32> {
 }
 
 pub fn primes_loop(n: u32) -> Vec<u32> {
-    todo!()
+    let mut primes: Vec<u32> = vec![];
+    for i in 2..n {
+        let mut flag: bool = true;
+        for j in 2..=((i as f64).sqrt() as u32) {
+            if i.is_multiple_of(j) {
+                flag = false;
+                break;
+            }
+        }
+        if flag {
+            primes.push(i);
+        }
+    }
+    primes
 }
 
 pub fn primes(n: u32) -> Vec<u32> {
-    todo!()
+    (2..n)
+        .filter(|&x| (2..=((x as f64).sqrt() as u32)).
+            all(|y| !x.is_multiple_of(y))).
+        collect()
 }
 
 pub fn run_length_encode_loop(list: &[u32]) -> Vec<(u32, usize)> {
@@ -70,11 +93,13 @@ pub fn run_length_encode(list: &[u32]) -> Vec<(u32, usize)> {
 }
 
 pub fn compose_all_loop(fns: &[fn(i32) -> i32]) -> impl Fn(i32) -> i32 {
-    todo!()
+    //todo!()
+    |x| x
 }
 
 pub fn compose_all(fns: &[fn(i32) -> i32]) -> impl Fn(i32) -> i32 {
-    todo!()
+    //todo!()
+    |x| x
 }
 
 #[cfg(test)]
