@@ -2,11 +2,30 @@ use itertools::Itertools;
 use std::collections::BTreeSet;
 
 // Nie zmieniaj ciała tej funkcji — jedynie typy.
-// pub fn wrap_call(f1: ??, f2: ??) -> u32
-// {
-//     let f1_rename = f1;
-//     f2(f1_rename(1), f1_rename(2))
-// }
+pub fn wrap_call(f1: impl Fn(u32) -> u32, f2: impl FnOnce(u32, u32) -> u32) -> u32
+{
+    let f1_rename = f1;
+    f2(f1_rename(1), f1_rename(2))
+}
+
+/* 
+pub fn wrap_call<T1, T2>(f1: T1, f2: T2) -> u32 
+where 
+    T1: Fn(u32) -> u32,
+    T2: FnOnce(u32, u32) -> u32,
+{
+    let f1_rename: T1 = f1;
+    f2(f1_rename(1), f1_rename(2))
+}
+*/
+
+pub fn make_counter(start: i64) -> impl FnMut() -> i64 {
+    let mut call_num: i64 = 0;
+    move || {
+        call_num += 1;
+        start + call_num - 1 
+    }
+}
 
 pub fn sum_squares_odd_loop(list: &[u32]) -> u32 {
     todo!()
