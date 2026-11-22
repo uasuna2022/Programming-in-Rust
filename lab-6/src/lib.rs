@@ -43,21 +43,44 @@ pub fn sum_squares_odd(list: &[u32]) -> u32 {
 }
 
 pub fn vertices_loop(edges: &[(u32, u32)]) -> Vec<u32> {
-    todo!()
+    let mut set = BTreeSet::new();
+    for &(u, v) in edges {
+        set.insert(u);
+        set.insert(v);
+    }
+    set.into_iter().collect()
 }
 
 pub fn vertices(edges: &[(u32, u32)]) -> Vec<u32> {
-    todo!()
+    edges.iter()
+        .flat_map(|&(u, v)| [u, v])
+        .unique()
+        .sorted()
+        .collect()
 }
 
 // Zwraca posortowany rosnąco wektor wierzchołków uczestniczących w jakimkolwiek
 // cyklu długości 2 (u->v oraz v->u, u!=v), bez duplikatów.
 pub fn cycles_2_loop(edges: &[(u32, u32)]) -> Vec<u32> {
-    todo!()
+    let mut set = BTreeSet::new();
+    for &(u1, v1) in edges {
+        for &(u2, v2) in edges {
+            if u1 == v2 && v1 == u2 && u1 != v1 {
+                set.insert(u1);
+            }
+        }
+    }
+    set.into_iter().collect()
 }
 
 pub fn cycles_2(edges: &[(u32, u32)]) -> Vec<u32> {
-    todo!()
+    edges.iter()
+        .cartesian_product(edges.iter())
+        .filter(|&(&(u1, v1), &(u2, v2))| u1 == v2 && v1 == u2 && u1 != v1)
+        .map(|(&(u1, _), _)| u1)
+        .unique()
+        .sorted()
+        .collect()
 }
 
 pub fn primes_loop(n: u32) -> Vec<u32> {
@@ -85,21 +108,47 @@ pub fn primes(n: u32) -> Vec<u32> {
 }
 
 pub fn run_length_encode_loop(list: &[u32]) -> Vec<(u32, usize)> {
-    todo!()
+    let mut result: Vec<(u32, usize)> = vec![];
+    if list.is_empty() {
+        return result;
+    }
+    let mut current_value: u32 = list[0];
+    let mut current_count: usize = 0;
+    for &value in list {
+        if value == current_value {
+            current_count += 1;
+        } else {
+            result.push((current_value, current_count));
+            current_value = value;
+            current_count = 1;
+        }
+    } 
+    result.push((current_value, current_count));
+
+    result
 }
 
 pub fn run_length_encode(list: &[u32]) -> Vec<(u32, usize)> {
-    todo!()
+    list.iter()
+        .chunk_by(|&x| *x)
+        .into_iter()
+        .map(|(val, group)| (val, group.count()))
+        .collect()
 }
 
 pub fn compose_all_loop(fns: &[fn(i32) -> i32]) -> impl Fn(i32) -> i32 {
-    //todo!()
-    |x| x
+    let functions = fns.to_vec();
+    move |mut x| {
+        for f in &functions {
+            x = f(x);
+        }
+        x
+    }
 }
 
 pub fn compose_all(fns: &[fn(i32) -> i32]) -> impl Fn(i32) -> i32 {
-    //todo!()
-    |x| x
+    let functions = fns.to_vec();
+    move |x| functions.iter().fold(x, |accumulate, f| f(accumulate))
 }
 
 #[cfg(test)]
